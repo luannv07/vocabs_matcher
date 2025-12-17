@@ -19,12 +19,105 @@
         }
 
         .container {
-            max-width: 1000px;
+            max-width: 1200px;
             margin: 0 auto;
             background: white;
             border-radius: 20px;
             padding: 30px;
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .saved-lists {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f7fafc;
+            border-radius: 10px;
+        }
+
+        .saved-lists h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        .lists-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
+        }
+
+        .list-box {
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .list-box:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
+        }
+
+        .list-box-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 8px;
+        }
+
+        .list-box-title {
+            font-weight: bold;
+            color: #333;
+            font-size: 1.1em;
+        }
+
+        .list-box-count {
+            color: #667eea;
+            font-size: 0.9em;
+            font-weight: bold;
+        }
+
+        .list-box-time {
+            color: #718096;
+            font-size: 0.85em;
+            margin-top: 5px;
+        }
+
+        .delete-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #f56565;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 25px;
+            height: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .list-box:hover .delete-btn {
+            opacity: 1;
+        }
+
+        .delete-btn:hover {
+            background: #e53e3e;
+        }
+
+        .no-lists {
+            text-align: center;
+            color: #718096;
+            padding: 20px;
         }
 
         h1 {
@@ -50,6 +143,25 @@
             font-weight: bold;
             margin-bottom: 8px;
             color: #333;
+        }
+
+        .input-with-name {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
         }
 
         textarea {
@@ -243,7 +355,17 @@
     <div class="container">
         <h1>📚 Ứng Dụng Học Từ Vựng</h1>
         
+        <div class="saved-lists" id="savedLists">
+            <h3>📋 Danh Sách Đã Lưu</h3>
+            <div class="lists-container" id="listsContainer">
+                <div class="no-lists">Chưa có danh sách nào được lưu</div>
+            </div>
+        </div>
+
         <div id="inputSection">
+            <div class="input-with-name">
+                <input type="text" id="listName" placeholder="Tên danh sách (vd: Bài 1, Chủ đề động vật...)">
+            </div>
             <div class="input-section">
                 <div class="input-group">
                     <label for="englishInput">Từ Tiếng Anh (mỗi từ 1 dòng):</label>
@@ -305,6 +427,94 @@
         let correctCount = 0;
         let wrongCount = 0;
         let answered = false;
+        let savedLists = [];
+
+        // Load saved lists from localStorage
+        function loadSavedLists() {
+            const saved = localStorage.getItem('vocabularyLists');
+            if (saved) {
+                savedLists = JSON.parse(saved);
+            }
+            displaySavedLists();
+        }
+
+        function saveLists() {
+            localStorage.setItem('vocabularyLists', JSON.stringify(savedLists));
+        }
+
+        function displaySavedLists() {
+            const container = document.getElementById('listsContainer');
+            
+            if (savedLists.length === 0) {
+                container.innerHTML = '<div class="no-lists">Chưa có danh sách nào được lưu</div>';
+                return;
+            }
+
+            container.innerHTML = '';
+            savedLists.forEach((list, index) => {
+                const box = document.createElement('div');
+                box.className = 'list-box';
+                box.innerHTML = `
+                    <div class="list-box-header">
+                        <div class="list-box-title">${list.name}</div>
+                        <div class="list-box-count">${list.words.length} từ</div>
+                    </div>
+                    <div class="list-box-time">${list.timestamp}</div>
+                    <button class="delete-btn" onclick="deleteList(${index}, event)">×</button>
+                `;
+                box.onclick = (e) => {
+                    if (!e.target.classList.contains('delete-btn')) {
+                        loadList(index);
+                    }
+                };
+                container.appendChild(box);
+            });
+        }
+
+        function deleteList(index, event) {
+            event.stopPropagation();
+            if (confirm('Bạn có chắc muốn xóa danh sách này?')) {
+                savedLists.splice(index, 1);
+                saveLists();
+                displaySavedLists();
+            }
+        }
+
+        function loadList(index) {
+            const list = savedLists[index];
+            const englishWords = list.words.map(w => w.english).join('\n');
+            const vietnameseWords = list.words.map(w => w.vietnamese).join('\n');
+            
+            document.getElementById('listName').value = list.name;
+            document.getElementById('englishInput').value = englishWords;
+            document.getElementById('vietnameseInput').value = vietnameseWords;
+            
+            window.scrollTo({ top: 300, behavior: 'smooth' });
+        }
+
+        function saveCurrentList(words) {
+            const listName = document.getElementById('listName').value.trim() || 'Danh sách ' + (savedLists.length + 1);
+            const now = new Date();
+            const timestamp = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()} ${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
+            
+            // Check if list with same name exists
+            const existingIndex = savedLists.findIndex(l => l.name === listName);
+            
+            const listData = {
+                name: listName,
+                words: words,
+                timestamp: timestamp
+            };
+
+            if (existingIndex !== -1) {
+                savedLists[existingIndex] = listData;
+            } else {
+                savedLists.push(listData);
+            }
+            
+            saveLists();
+            displaySavedLists();
+        }
 
         function startGame() {
             const english = document.getElementById('englishInput').value.trim().split('\n').filter(w => w.trim());
@@ -325,6 +535,9 @@
                 vietnamese: vietnamese[i].trim()
             }));
 
+            // Save the list
+            saveCurrentList(vocabulary);
+
             // Shuffle vocabulary
             vocabulary.sort(() => Math.random() - 0.5);
 
@@ -334,6 +547,7 @@
             wrongCount = 0;
 
             document.getElementById('inputSection').style.display = 'none';
+            document.getElementById('savedLists').style.display = 'none';
             document.getElementById('gameSection').style.display = 'block';
             document.getElementById('resultSection').style.display = 'none';
 
@@ -413,6 +627,11 @@
             buttons.forEach(b => b.disabled = true);
             
             document.getElementById('score').textContent = score;
+
+            // Auto next after 1 second
+            setTimeout(() => {
+                nextQuestion();
+            }, 1000);
         }
 
         function showMeaning() {
@@ -453,9 +672,14 @@
         function backToInput() {
             document.getElementById('resultSection').style.display = 'none';
             document.getElementById('inputSection').style.display = 'block';
+            document.getElementById('savedLists').style.display = 'block';
             document.getElementById('englishInput').value = '';
             document.getElementById('vietnameseInput').value = '';
+            document.getElementById('listName').value = '';
         }
+
+        // Load saved lists on page load
+        window.onload = loadSavedLists;
     </script>
 </body>
 </html>
